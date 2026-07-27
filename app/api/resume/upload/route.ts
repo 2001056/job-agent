@@ -7,6 +7,9 @@ const pdfParse = require('pdf-parse') as (
   buf: Buffer
 ) => Promise<{ text: string; numpages: number }>;
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_TEXT_LENGTH = 10_000; // 10,000자
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const formData = await request.formData();
@@ -21,11 +24,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     let text: string;
 
     if (file instanceof File) {
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { success: false, error: `PDF 파일 크기는 5MB 이하여야 합니다. (현재: ${(file.size / 1024 / 1024).toFixed(1)}MB)` },
+          { status: 413 }
+        );
+      }
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const { text: extractedText } = await pdfParse(buffer);
       text = extractedText;
     } else if (typeof textField === 'string' && textField.trim().length > 0) {
+      if (textField.length > MAX_TEXT_LENGTH) {
+        return NextResponse.json(
+          { success: false, error: `텍스트는 ${MAX_TEXT_LENGTH.toLocaleString()}자 이하여야 합니다. (현재: ${textField.length.toLocaleString()}자)` },
+          { status: 413 }
+        );
+      }
       text = textField;
     } else {
       return NextResponse.json(
