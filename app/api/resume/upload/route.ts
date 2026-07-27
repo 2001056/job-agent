@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { indexResume, splitIntoChunks } from '@/lib/rag/indexer';
 
-// pdf-parse는 CJS 패키지 — require로 로드, .default 여부 모두 대응
+// pdf-parse v1 — require로 로드 (CJS default export)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const _pdfMod = require('pdf-parse');
-const pdfParse = (typeof _pdfMod === 'function' ? _pdfMod : _pdfMod.default) as (
+const pdfParse = require('pdf-parse') as (
   buf: Buffer
 ) => Promise<{ text: string; numpages: number }>;
 
