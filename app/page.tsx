@@ -143,6 +143,15 @@ export default function Home() {
         <p className="text-sm text-gray-500">AI 기반 채용 공고 분석 및 자기소개서 생성</p>
       </header>
 
+      {/* 안내 배너 */}
+      <div className="bg-blue-50 border-b border-blue-100 px-6 py-2.5">
+        <p className="text-xs text-blue-700 text-center leading-relaxed">
+          📚 본 서비스는 <span className="font-semibold">학습 목적</span>으로 제작된 프로젝트입니다.
+          무료 AI 모델의 성능 제약으로 인해 <span className="font-semibold">AI 요청 한도 초과 오류</span>가 발생할 수 있습니다.
+          오류 발생 시 <span className="font-semibold">5~10분 후 재시도</span>해 주세요.
+        </p>
+      </div>
+
       <main className="mx-auto max-w-6xl px-6 py-8">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* 왼쪽 패널 */}
