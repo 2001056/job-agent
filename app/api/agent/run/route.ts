@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { runOrchestrator } from '@/lib/agents/orchestrator';
 import { emitJobEvent, setJobState } from '@/lib/job-store';
+
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as { jobUrl?: string; userId?: string };
@@ -12,16 +15,14 @@ export async function POST(req: NextRequest) {
 
   const jobId = crypto.randomUUID();
 
-  // 백그라운드에서 비동기 실행 (await 없이)
-  void runOrchestrator(jobUrl, userId, (event) => {
-    emitJobEvent(jobId, event);
-  })
-    .then((finalState) => {
-      setJobState(jobId, finalState);
+  // waitUntil: 응답 반환 후에도 Vercel이 백그라운드 작업을 완료될 때까지 유지
+  waitUntil(
+    runOrchestrator(jobUrl, userId, (event) => {
+      emitJobEvent(jobId, event);
     })
-    .catch((err) => {
-      console.error(`[job:${jobId}] orchestrator error:`, err);
-    });
+      .then((finalState) => setJobState(jobId, finalState))
+      .catch((err) => console.error(`[job:${jobId}] orchestrator error:`, err))
+  );
 
   return NextResponse.json({ jobId });
 }

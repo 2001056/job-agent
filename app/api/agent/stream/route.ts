@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { addJobListener, getJobState, removeJobListener } from '@/lib/job-store';
 import type { SSEEvent } from '@/lib/types/agent.types';
 
+export const maxDuration = 60;
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const jobId = searchParams.get('jobId');
