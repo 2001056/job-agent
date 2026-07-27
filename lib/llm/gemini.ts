@@ -17,13 +17,19 @@ function getGeminiClient(): GoogleGenAI {
   return new GoogleGenAI({ apiKey });
 }
 
+const KOREAN_ENFORCE = '당신은 반드시 한국어로만 응답합니다. 어떤 경우에도 중국어·일본어·영어 등 다른 언어를 사용하지 않습니다.\n\n';
+
 export async function generateText(prompt: string, systemPrompt?: string): Promise<string> {
   try {
     const groq = getGroqClient();
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
+      temperature: 0.2,
       messages: [
-        ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+        {
+          role: 'system' as const,
+          content: KOREAN_ENFORCE + (systemPrompt ?? ''),
+        },
         { role: 'user' as const, content: prompt },
       ],
     });
@@ -40,9 +46,13 @@ export async function generateJSON<T>(prompt: string, systemPrompt?: string): Pr
     const groq = getGroqClient();
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
+      temperature: 0.2,
       response_format: { type: 'json_object' },
       messages: [
-        ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+        {
+          role: 'system' as const,
+          content: KOREAN_ENFORCE + (systemPrompt ?? ''),
+        },
         { role: 'user' as const, content: prompt },
       ],
     });
