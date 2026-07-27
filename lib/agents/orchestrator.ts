@@ -4,6 +4,7 @@ import { runMatcher } from './matcher';
 import { runReviewer } from './reviewer';
 import { runScraper } from './scraper';
 import { runWriter } from './writer';
+import { toUserMessage } from '../error-formatter';
 
 async function withRetry<T>(fn: () => Promise<T>, maxRetries = 2): Promise<T> {
   let lastError: unknown;
@@ -141,10 +142,13 @@ export async function runOrchestrator(
     emit({ type: 'complete', data: state, timestamp: now() });
   } catch (err) {
     const agent = state.currentAgent ?? 'orchestrator';
-    addLog(makeLog(agent, `오류 발생: ${err instanceof Error ? err.message : String(err)}`, 'error'));
+    // 상세 에러는 서버 콘솔에만 기록
+    console.error(`[orchestrator][${agent}]`, err);
+    const userMsg = toUserMessage(err);
+    addLog(makeLog(agent, `오류 발생: ${userMsg}`, 'error'));
     state.status = 'error';
     state.updatedAt = now();
-    emit({ type: 'error', data: { message: err instanceof Error ? err.message : String(err) }, timestamp: now() });
+    emit({ type: 'error', data: { message: userMsg }, timestamp: now() });
     throw err;
   }
 

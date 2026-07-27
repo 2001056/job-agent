@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { indexResume, splitIntoChunks } from '@/lib/rag/indexer';
+import { toUserMessage } from '@/lib/error-formatter';
 
 // pdf-parse v1 — require로 로드 (CJS default export)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -62,11 +63,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ success: true, chunks: chunkCount });
   } catch (error) {
+    console.error('[upload]', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: `이력서 업로드 처리 실패: ${error instanceof Error ? error.message : String(error)}`,
-      },
+      { success: false, error: toUserMessage(error) },
       { status: 500 }
     );
   }

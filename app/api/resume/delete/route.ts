@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { toUserMessage } from '@/lib/error-formatter';
 
 export async function DELETE(request: NextRequest) {
   try {
     const userId = request.nextUrl.searchParams.get('userId');
 
     if (!userId) {
-      return NextResponse.json({ error: 'userId가 필요합니다.' }, { status: 400 });
+      return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 });
     }
 
     const { error } = await supabase
@@ -15,13 +16,15 @@ export async function DELETE(request: NextRequest) {
       .eq('user_id', userId);
 
     if (error) {
-      throw new Error(`이력서 삭제 실패: ${error.message}`);
+      console.error('[delete-resume]', error);
+      throw new Error(error.message);
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('[delete-resume]', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '삭제 중 오류가 발생했습니다.' },
+      { error: toUserMessage(error) },
       { status: 500 }
     );
   }
