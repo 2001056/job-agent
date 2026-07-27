@@ -23,6 +23,10 @@ const KOREAN_ENFORCE =
   '한자(漢字), 중국어 간체·번체, 일본어 가나는 절대 사용하지 않습니다. ' +
   '오직 한글, 숫자, 영문 기술용어만 허용됩니다.\n\n';
 
+function stripThinking(raw: string): string {
+  return raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
+
 export async function generateText(prompt: string, systemPrompt?: string): Promise<string> {
   try {
     const groq = getGroqClient();
@@ -37,7 +41,7 @@ export async function generateText(prompt: string, systemPrompt?: string): Promi
         { role: 'user' as const, content: prompt },
       ],
     });
-    return completion.choices[0]?.message?.content ?? '';
+    return stripThinking(completion.choices[0]?.message?.content ?? '');
   } catch (error) {
     throw new Error(
       `Groq generateText 실패: ${error instanceof Error ? error.message : String(error)}`
@@ -62,7 +66,7 @@ export async function generateJSON<T>(prompt: string, systemPrompt?: string): Pr
         },
       ],
     });
-    const raw = completion.choices[0]?.message?.content ?? '{}';
+    const raw = stripThinking(completion.choices[0]?.message?.content ?? '{}');
     const cleaned = raw.replace(/^```json\s*/m, '').replace(/^```\s*/m, '').replace(/```\s*$/m, '').trim();
     return JSON.parse(cleaned) as T;
   } catch (error) {
