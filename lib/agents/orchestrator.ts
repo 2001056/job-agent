@@ -1,4 +1,4 @@
-import type { AgentLog, AgentName, AgentState } from '../types/agent.types';
+import type { AgentLog, AgentName, AgentState, SSEEvent } from '../types/agent.types';
 import { runAnalyzer } from './analyzer';
 import { runMatcher } from './matcher';
 import { runReviewer } from './reviewer';
@@ -30,7 +30,11 @@ function makeLog(agent: AgentName, message: string, level: AgentLog['level'] = '
   return { agent, message, timestamp: now(), level };
 }
 
-export async function runOrchestrator(jobUrl: string, userId: string): Promise<AgentState> {
+export async function runOrchestrator(
+  jobUrl: string,
+  userId: string,
+  onEvent?: (event: SSEEvent) => void,
+): Promise<AgentState> {
   const state: AgentState = {
     jobId: crypto.randomUUID(),
     userId,
@@ -50,29 +54,52 @@ export async function runOrchestrator(jobUrl: string, userId: string): Promise<A
     updatedAt: now(),
   };
 
+  const emit = (event: SSEEvent) => {
+    onEvent?.(event);
+  };
+
   const addLog = (log: AgentLog) => {
     state.logs.push(log);
     state.updatedAt = now();
+    emit({ type: 'log', data: log, timestamp: now() });
+  };
+
+  const emitStateUpdate = () => {
+    emit({
+      type: 'state_update',
+      data: {
+        currentAgent: state.currentAgent,
+        status: state.status,
+        updatedAt: state.updatedAt,
+      },
+      timestamp: now(),
+    });
   };
 
   try {
     // 1. Scraper
     state.currentAgent = 'scraper';
-    addLog(makeLog('scraper', '채용 공고 스크래핑 시작'));
+    emitStateUpdate();
+    addLog(makeLog('scraper', 'scraper 에이전트 시작'));
     state.rawJobText = await withRetry(() => runScraper(jobUrl));
     addLog(makeLog('scraper', `스크래핑 완료 (${state.rawJobText.length}자)`));
+    addLog(makeLog('scraper', 'scraper 에이전트 완료'));
 
     // 2. Analyzer
     state.currentAgent = 'analyzer';
-    addLog(makeLog('analyzer', '공고 텍스트 분석 시작'));
+    emitStateUpdate();
+    addLog(makeLog('analyzer', 'analyzer 에이전트 시작'));
     state.structuredJob = await withRetry(() => runAnalyzer(state.rawJobText!));
     addLog(makeLog('analyzer', `분석 완료: ${state.structuredJob.position} @ ${state.structuredJob.companyName}`));
+    addLog(makeLog('analyzer', 'analyzer 에이전트 완료'));
 
     // 3. Matcher
     state.currentAgent = 'matcher';
-    addLog(makeLog('matcher', '이력서-공고 갭 분석 시작'));
+    emitStateUpdate();
+    addLog(makeLog('matcher', 'matcher 에이전트 시작'));
     state.matchAnalysis = await withRetry(() => runMatcher(state.structuredJob!, userId));
     addLog(makeLog('matcher', `매칭 완료: fitScore ${state.matchAnalysis.fitScore}`));
+    addLog(makeLog('matcher', 'matcher 에이전트 완료'));
 
     // 4 & 5. Writer + Reviewer loop
     let draft = '';
@@ -80,16 +107,21 @@ export async function runOrchestrator(jobUrl: string, userId: string): Promise<A
 
     do {
       state.currentAgent = 'writer';
+      emitStateUpdate();
+      addLog(makeLog('writer', 'writer 에이전트 시작'));
       addLog(makeLog('writer', `자기소개서 초안 생성 시작 (시도 ${state.retryCount + 1})`));
       draft = await withRetry(() => runWriter(state.structuredJob!, state.matchAnalysis!));
       state.draftCoverLetter = draft;
       addLog(makeLog('writer', `초안 생성 완료 (${draft.length}자)`));
+      addLog(makeLog('writer', 'writer 에이전트 완료'));
 
       state.currentAgent = 'reviewer';
-      addLog(makeLog('reviewer', '자기소개서 품질 검토 시작'));
+      emitStateUpdate();
+      addLog(makeLog('reviewer', 'reviewer 에이전트 시작'));
       feedback = await withRetry(() => runReviewer(draft, state.matchAnalysis!));
       state.reviewFeedback = feedback;
       addLog(makeLog('reviewer', `검토 완료: score ${feedback.score}, passed ${feedback.passed}`));
+      addLog(makeLog('reviewer', 'reviewer 에이전트 완료'));
 
       if (!feedback.passed && state.retryCount < 2) {
         state.retryCount++;
@@ -105,11 +137,14 @@ export async function runOrchestrator(jobUrl: string, userId: string): Promise<A
     state.currentAgent = null;
     state.updatedAt = now();
     addLog(makeLog('orchestrator', '파이프라인 완료'));
+
+    emit({ type: 'complete', data: state, timestamp: now() });
   } catch (err) {
     const agent = state.currentAgent ?? 'orchestrator';
     addLog(makeLog(agent, `오류 발생: ${err instanceof Error ? err.message : String(err)}`, 'error'));
     state.status = 'error';
     state.updatedAt = now();
+    emit({ type: 'error', data: { message: err instanceof Error ? err.message : String(err) }, timestamp: now() });
     throw err;
   }
 
