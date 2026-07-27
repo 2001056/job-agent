@@ -51,13 +51,15 @@ export async function generateJSON<T>(prompt: string, systemPrompt?: string): Pr
     const completion = await groq.chat.completions.create({
       model: MODEL,
       temperature: 0,
-      response_format: { type: 'json_object' },
       messages: [
         {
           role: 'system' as const,
           content: KOREAN_ENFORCE + (systemPrompt ?? ''),
         },
-        { role: 'user' as const, content: prompt },
+        {
+          role: 'user' as const,
+          content: prompt + '\n\n반드시 순수한 JSON만 출력하세요. 마크다운 코드블록(```)이나 설명 없이 JSON 객체만 반환하세요.',
+        },
       ],
     });
     const raw = completion.choices[0]?.message?.content ?? '{}';
