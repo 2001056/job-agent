@@ -28,7 +28,12 @@ export default function ResultViewer({ state }: ResultViewerProps) {
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-4 text-base font-semibold text-gray-900">분석 결과</h2>
+      <div className="mb-4 flex items-start justify-between">
+        <h2 className="text-base font-semibold text-gray-900">분석 결과</h2>
+        <span className="ml-3 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs text-amber-700 shrink-0">
+          참고용 초안 — 제출 전 반드시 본인이 검토·수정하세요
+        </span>
+      </div>
 
       {/* 탭 */}
       <div className="mb-4 flex gap-1 rounded-lg bg-gray-100 p-1">
@@ -107,6 +112,11 @@ export default function ResultViewer({ state }: ResultViewerProps) {
       {/* 자기소개서 */}
       {activeTab === 'cover' && (
         <div className="flex flex-col gap-2">
+          <p className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-xs text-amber-800 leading-relaxed">
+            ⚠️ 이 초안은 AI가 생성한 참고 자료입니다. AI 특유의 문체가 포함될 수 있으므로
+            반드시 본인의 언어로 검토·수정한 뒤 제출하세요. 그대로 제출 시 발생하는 불이익에
+            대해 본 서비스는 책임지지 않습니다.
+          </p>
           <textarea
             value={coverText}
             onChange={(e) => setCoverText(e.target.value)}
