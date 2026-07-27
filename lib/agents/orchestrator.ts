@@ -13,13 +13,12 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 2): Promise<T> {
       return await fn();
     } catch (err) {
       lastError = err;
-      if (attempt < maxRetries) {
-        const is429 = /429|rate.?limit|quota/i.test(
-          err instanceof Error ? err.message : String(err)
-        );
-        // 429는 60초, 일반 오류는 2·4초 대기
-        await sleep(is429 ? 60_000 : 2000 * (attempt + 1));
-      }
+      const is429 = /429|rate.?limit|quota/i.test(
+        err instanceof Error ? err.message : String(err)
+      );
+      // 429는 재시도 없이 즉시 실패 (Vercel 60초 timeout 초과 방지)
+      if (is429) throw err;
+      if (attempt < maxRetries) await sleep(2000 * (attempt + 1));
     }
   }
   throw lastError;

@@ -108,6 +108,15 @@ export default function Home() {
       };
 
       es.onerror = () => {
+        setLogs((prev) => [
+          ...prev,
+          {
+            agent: 'orchestrator' as const,
+            message: '연결이 끊어졌습니다. 잠시 후 다시 시도해주세요.',
+            level: 'error' as const,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
         setStatus('error');
         setRunning(false);
         es.close();
