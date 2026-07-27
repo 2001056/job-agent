@@ -24,7 +24,26 @@ const KOREAN_ENFORCE =
   '오직 한글, 숫자, 영문 기술용어만 허용됩니다.\n\n';
 
 function stripThinking(raw: string): string {
-  return raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  // 닫힌 think 블록 제거
+  let result = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  // 닫히지 않은 <think> 이후 전체 제거
+  result = result.replace(/<think>[\s\S]*/gi, '').trim();
+  return result;
+}
+
+function extractJSON(raw: string): string {
+  const withoutThink = stripThinking(raw);
+  // 마크다운 코드블록 제거
+  const noFence = withoutThink
+    .replace(/^```json\s*/m, '')
+    .replace(/^```\s*/m, '')
+    .replace(/```\s*$/m, '')
+    .trim();
+  // { } 범위로 JSON 직접 추출 (think 잔재 있어도 안전)
+  const start = noFence.indexOf('{');
+  const end = noFence.lastIndexOf('}');
+  if (start !== -1 && end > start) return noFence.slice(start, end + 1);
+  return noFence;
 }
 
 export async function generateText(prompt: string, systemPrompt?: string): Promise<string> {
@@ -66,9 +85,8 @@ export async function generateJSON<T>(prompt: string, systemPrompt?: string): Pr
         },
       ],
     });
-    const raw = stripThinking(completion.choices[0]?.message?.content ?? '{}');
-    const cleaned = raw.replace(/^```json\s*/m, '').replace(/^```\s*/m, '').replace(/```\s*$/m, '').trim();
-    return JSON.parse(cleaned) as T;
+    const raw = extractJSON(completion.choices[0]?.message?.content ?? '{}');
+    return JSON.parse(raw) as T;
   } catch (error) {
     throw new Error(
       `Groq generateJSON 실패: ${error instanceof Error ? error.message : String(error)}`
