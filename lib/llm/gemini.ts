@@ -46,7 +46,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   try {
     const ai = getClient();
     const response = await ai.models.embedContent({
-      model: 'text-embedding-004',
+      model: 'gemini-embedding-001',
       contents: text,
     });
     const values = response.embeddings?.[0]?.values;
