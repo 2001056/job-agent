@@ -7,7 +7,7 @@ export async function runMatcher(job: StructuredJob, userId: string): Promise<Ma
   const chunks = await retrieveChunks(userId, query);
 
   const systemPrompt =
-    '당신은 채용 매칭 전문가입니다. 이력서와 채용 공고를 비교해 분석 결과를 JSON으로 반환하세요.';
+    '당신은 채용 매칭 전문가입니다. 이력서와 채용 공고를 비교해 분석 결과를 JSON으로 반환하세요. 모든 텍스트 필드는 반드시 한국어로 작성하세요.';
 
   const userPrompt = `이력서 내용과 채용 공고를 비교해 아래 JSON 스키마에 맞게 분석 결과를 반환하세요.
 

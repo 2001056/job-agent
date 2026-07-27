@@ -3,7 +3,7 @@ import type { MatchAnalysis, StructuredJob } from '../types/agent.types';
 
 export async function runWriter(job: StructuredJob, analysis: MatchAnalysis): Promise<string> {
   const systemPrompt =
-    '당신은 채용 전문가입니다. 지원자의 강점을 부각하는 설득력 있는 자기소개서를 작성하세요.';
+    '당신은 채용 전문가입니다. 지원자의 강점을 부각하는 설득력 있는 자기소개서를 반드시 한국어로 작성하세요. 절대 중국어나 다른 언어를 사용하지 마세요.';
 
   const userPrompt = `다음 정보를 바탕으로 맞춤형 자기소개서를 작성하세요. 분량은 800~1000자로 제한합니다.
 
