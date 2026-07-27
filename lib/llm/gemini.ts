@@ -11,7 +11,7 @@ function getClient(): GoogleGenerativeAI {
 export async function generateText(prompt: string, systemPrompt?: string): Promise<string> {
   try {
     const model = getClient().getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       ...(systemPrompt && { systemInstruction: systemPrompt }),
     });
     const result = await model.generateContent(prompt);
@@ -26,7 +26,7 @@ export async function generateText(prompt: string, systemPrompt?: string): Promi
 export async function generateJSON<T>(prompt: string, systemPrompt?: string): Promise<T> {
   try {
     const model = getClient().getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       ...(systemPrompt && { systemInstruction: systemPrompt }),
     });
     const result = await model.generateContent(prompt);
