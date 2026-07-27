@@ -18,7 +18,9 @@ function getGeminiClient(): GoogleGenAI {
 }
 
 const MODEL = 'qwen/qwen3.6-27b';
+// /no_think: Qwen3 thinking 모드 비활성화 (토큰 낭비 방지)
 const KOREAN_ENFORCE =
+  '/no_think\n' +
   '당신은 반드시 한국어(한글)로만 응답합니다. ' +
   '한자(漢字), 중국어 간체·번체, 일본어 가나는 절대 사용하지 않습니다. ' +
   '오직 한글, 숫자, 영문 기술용어만 허용됩니다.\n\n';
