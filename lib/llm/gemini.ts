@@ -17,36 +17,13 @@ function getGeminiClient(): GoogleGenAI {
   return new GoogleGenAI({ apiKey });
 }
 
-const MODEL = 'qwen/qwen3.6-27b';
-// /no_think: Qwen3 thinking 모드 비활성화 (토큰 낭비 방지)
-const KOREAN_ENFORCE =
-  '/no_think\n' +
-  '당신은 반드시 한국어(한글)로만 응답합니다. ' +
-  '한자(漢字), 중국어 간체·번체, 일본어 가나는 절대 사용하지 않습니다. ' +
-  '오직 한글, 숫자, 영문 기술용어만 허용됩니다.\n\n';
+const MODEL = 'llama-3.3-70b-versatile';
 
-function stripThinking(raw: string): string {
-  // 닫힌 think 블록 제거
-  let result = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-  // 닫히지 않은 <think> 이후 전체 제거
-  result = result.replace(/<think>[\s\S]*/gi, '').trim();
-  return result;
-}
-
-function extractJSON(raw: string): string {
-  const withoutThink = stripThinking(raw);
-  // 마크다운 코드블록 제거
-  const noFence = withoutThink
-    .replace(/^```json\s*/m, '')
-    .replace(/^```\s*/m, '')
-    .replace(/```\s*$/m, '')
-    .trim();
-  // { } 범위로 JSON 직접 추출 (think 잔재 있어도 안전)
-  const start = noFence.indexOf('{');
-  const end = noFence.lastIndexOf('}');
-  if (start !== -1 && end > start) return noFence.slice(start, end + 1);
-  return noFence;
-}
+// 시스템 프롬프트 앞에 항상 삽입 — 한국어 강제
+const KOREAN_SYSTEM =
+  'You MUST respond ONLY in Korean (한국어). ' +
+  'Do NOT use Chinese characters (漢字/汉字), Japanese kana, or any non-Korean script. ' +
+  'Use only Korean Hangul (한글), numbers, and English technical terms when necessary.\n\n';
 
 export async function generateText(prompt: string, systemPrompt?: string): Promise<string> {
   try {
@@ -54,15 +31,16 @@ export async function generateText(prompt: string, systemPrompt?: string): Promi
     const completion = await groq.chat.completions.create({
       model: MODEL,
       temperature: 0,
+      seed: 42,
       messages: [
         {
           role: 'system' as const,
-          content: KOREAN_ENFORCE + (systemPrompt ?? ''),
+          content: KOREAN_SYSTEM + (systemPrompt ?? ''),
         },
         { role: 'user' as const, content: prompt },
       ],
     });
-    return stripThinking(completion.choices[0]?.message?.content ?? '');
+    return completion.choices[0]?.message?.content ?? '';
   } catch (error) {
     throw new Error(
       `Groq generateText 실패: ${error instanceof Error ? error.message : String(error)}`
@@ -76,18 +54,17 @@ export async function generateJSON<T>(prompt: string, systemPrompt?: string): Pr
     const completion = await groq.chat.completions.create({
       model: MODEL,
       temperature: 0,
+      seed: 42,
+      response_format: { type: 'json_object' },
       messages: [
         {
           role: 'system' as const,
-          content: KOREAN_ENFORCE + (systemPrompt ?? ''),
+          content: KOREAN_SYSTEM + (systemPrompt ?? ''),
         },
-        {
-          role: 'user' as const,
-          content: prompt + '\n\n반드시 순수한 JSON만 출력하세요. 마크다운 코드블록(```)이나 설명 없이 JSON 객체만 반환하세요.',
-        },
+        { role: 'user' as const, content: prompt },
       ],
     });
-    const raw = extractJSON(completion.choices[0]?.message?.content ?? '{}');
+    const raw = completion.choices[0]?.message?.content ?? '{}';
     return JSON.parse(raw) as T;
   } catch (error) {
     throw new Error(
