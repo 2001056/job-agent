@@ -1,6 +1,15 @@
+import Groq from 'groq-sdk';
 import { GoogleGenAI } from '@google/genai';
 
-function getClient(): GoogleGenAI {
+function getGroqClient(): Groq {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY 환경 변수가 설정되지 않았습니다. .env.local을 확인하세요.');
+  }
+  return new Groq({ apiKey });
+}
+
+function getGeminiClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY 환경 변수가 설정되지 않았습니다. .env.local을 확인하세요.');
@@ -10,41 +19,45 @@ function getClient(): GoogleGenAI {
 
 export async function generateText(prompt: string, systemPrompt?: string): Promise<string> {
   try {
-    const ai = getClient();
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-      ...(systemPrompt && { config: { systemInstruction: systemPrompt } }),
+    const groq = getGroqClient();
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+        { role: 'user' as const, content: prompt },
+      ],
     });
-    return response.text ?? '';
+    return completion.choices[0]?.message?.content ?? '';
   } catch (error) {
     throw new Error(
-      `Gemini generateText 실패: ${error instanceof Error ? error.message : String(error)}`
+      `Groq generateText 실패: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
 
 export async function generateJSON<T>(prompt: string, systemPrompt?: string): Promise<T> {
   try {
-    const ai = getClient();
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-      ...(systemPrompt && { config: { systemInstruction: systemPrompt } }),
+    const groq = getGroqClient();
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      response_format: { type: 'json_object' },
+      messages: [
+        ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+        { role: 'user' as const, content: prompt },
+      ],
     });
-    const raw = response.text ?? '';
-    const cleaned = raw.replace(/^```json\s*/m, '').replace(/^```\s*/m, '').replace(/```\s*$/m, '').trim();
-    return JSON.parse(cleaned) as T;
+    const raw = completion.choices[0]?.message?.content ?? '{}';
+    return JSON.parse(raw) as T;
   } catch (error) {
     throw new Error(
-      `Gemini generateJSON 실패: ${error instanceof Error ? error.message : String(error)}`
+      `Groq generateJSON 실패: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
 
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    const ai = getClient();
+    const ai = getGeminiClient();
     const response = await ai.models.embedContent({
       model: 'gemini-embedding-001',
       contents: text,
