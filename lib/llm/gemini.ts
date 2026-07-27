@@ -17,14 +17,18 @@ function getGeminiClient(): GoogleGenAI {
   return new GoogleGenAI({ apiKey });
 }
 
-const KOREAN_ENFORCE = '당신은 반드시 한국어로만 응답합니다. 어떤 경우에도 중국어·일본어·영어 등 다른 언어를 사용하지 않습니다.\n\n';
+const MODEL = 'qwen/qwen3.6-27b';
+const KOREAN_ENFORCE =
+  '당신은 반드시 한국어(한글)로만 응답합니다. ' +
+  '한자(漢字), 중국어 간체·번체, 일본어 가나는 절대 사용하지 않습니다. ' +
+  '오직 한글, 숫자, 영문 기술용어만 허용됩니다.\n\n';
 
 export async function generateText(prompt: string, systemPrompt?: string): Promise<string> {
   try {
     const groq = getGroqClient();
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0.2,
+      model: MODEL,
+      temperature: 0,
       messages: [
         {
           role: 'system' as const,
@@ -45,8 +49,8 @@ export async function generateJSON<T>(prompt: string, systemPrompt?: string): Pr
   try {
     const groq = getGroqClient();
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0.2,
+      model: MODEL,
+      temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
         {
@@ -57,7 +61,8 @@ export async function generateJSON<T>(prompt: string, systemPrompt?: string): Pr
       ],
     });
     const raw = completion.choices[0]?.message?.content ?? '{}';
-    return JSON.parse(raw) as T;
+    const cleaned = raw.replace(/^```json\s*/m, '').replace(/^```\s*/m, '').replace(/```\s*$/m, '').trim();
+    return JSON.parse(cleaned) as T;
   } catch (error) {
     throw new Error(
       `Groq generateJSON 실패: ${error instanceof Error ? error.message : String(error)}`
