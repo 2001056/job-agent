@@ -112,7 +112,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY= # Supabase > Project Settings > API > service_role
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# (선택) 텍스트 생성을 Claude로 전환 — 미설정 시 Groq 사용, 임베딩은 항상 Gemini
+# (선택) 텍스트 생성을 Claude로 전환 — 미설정 또는 Claude 호출 실패 시 Groq 사용, 임베딩은 항상 Gemini
 LLM_PROVIDER=anthropic
 ANTHROPIC_API_KEY=         # https://console.anthropic.com/settings/keys
 ANTHROPIC_MODEL=           # 기본 claude-haiku-5-5
