@@ -1,5 +1,11 @@
 import Groq from 'groq-sdk';
 import { GoogleGenAI } from '@google/genai';
+import { generateJSONWithClaude, generateTextWithClaude } from './claude';
+
+// LLM_PROVIDER=anthropic 이면 텍스트 생성을 Claude로 보낸다 (기본: Groq). 임베딩은 항상 Gemini.
+function isClaudeEnabled(): boolean {
+  return process.env.LLM_PROVIDER === 'anthropic';
+}
 
 function getGroqClient(): Groq {
   const apiKey = process.env.GROQ_API_KEY;
@@ -26,6 +32,7 @@ const KOREAN_SYSTEM =
   'Use only Korean Hangul (한글), numbers, and English technical terms when necessary.\n\n';
 
 export async function generateText(prompt: string, systemPrompt?: string): Promise<string> {
+  if (isClaudeEnabled()) return generateTextWithClaude(prompt, KOREAN_SYSTEM + (systemPrompt ?? ''));
   try {
     const groq = getGroqClient();
     const completion = await groq.chat.completions.create({
@@ -49,6 +56,7 @@ export async function generateText(prompt: string, systemPrompt?: string): Promi
 }
 
 export async function generateJSON<T>(prompt: string, systemPrompt?: string): Promise<T> {
+  if (isClaudeEnabled()) return generateJSONWithClaude<T>(prompt, KOREAN_SYSTEM + (systemPrompt ?? ''));
   try {
     const groq = getGroqClient();
     const completion = await groq.chat.completions.create({
